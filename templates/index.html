@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Voice Biometric Authentication - Home{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Hero Section -->
+            <div class="text-center mb-5">
+                <div class="mb-4">
+                    <i class="fas fa-microphone-alt fa-5x text-primary"></i>
+                </div>
+                <h1 class="display-4 fw-bold mb-3">Voice Biometric Authentication</h1>
+                <p class="lead text-muted mb-4">
+                    Secure multi-factor authentication using your unique voiceprint. 
+                    Advanced MFCC feature extraction and machine learning for robust voice recognition.
+                </p>
+            </div>
+
+            <!-- Features -->
+            <div class="row g-4 mb-5">
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 bg-dark">
+                        <div class="card-body text-center">
+                            <i class="fas fa-shield-alt fa-3x text-success mb-3"></i>
+                            <h5 class="card-title">Secure</h5>
+                            <p class="card-text text-muted">Advanced biometric authentication using MFCC feature extraction</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 bg-dark">
+                        <div class="card-body text-center">
+                            <i class="fas fa-brain fa-3x text-info mb-3"></i>
+                            <h5 class="card-title">Smart</h5>
+                            <p class="card-text text-muted">Machine learning algorithms for accurate voice matching</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 bg-dark">
+                        <div class="card-body text-center">
+                            <i class="fas fa-bolt fa-3x text-warning mb-3"></i>
+                            <h5 class="card-title">Fast</h5>
+                            <p class="card-text text-muted">Quick authentication in seconds with high accuracy</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Call to Action -->
+            <div class="text-center">
+                {% if current_user.is_authenticated %}
+                    <div class="card bg-dark border-0">
+                        <div class="card-body">
+                            <h5 class="card-title">Welcome back, {{ current_user.username }}!</h5>
+                            <p class="card-text text-muted mb-3">Manage your voice authentication settings</p>
+                            <div class="d-grid gap-2 d-md-block">
+                                <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                                </a>
+                                {% if current_user.has_voiceprint() %}
+                                    <a href="{{ url_for('voice_auth') }}" class="btn btn-success">
+                                        <i class="fas fa-microphone me-2"></i>Authenticate
+                                    </a>
+                                {% else %}
+                                    <a href="{{ url_for('enroll_voice') }}" class="btn btn-warning">
+                                        <i class="fas fa-user-plus me-2"></i>Enroll Voice
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="card bg-dark border-0">
+                        <div class="card-body">
+                            <h5 class="card-title">Get Started</h5>
+                            <p class="card-text text-muted mb-3">Create an account and enroll your voice for secure authentication</p>
+                            <div class="d-grid gap-2 d-md-block">
+                                <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-user-plus me-2"></i>Register
+                                </a>
+                                <a href="{{ url_for('login') }}" class="btn btn-outline-secondary btn-lg">
+                                    <i class="fas fa-sign-in-alt me-2"></i>Login
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- How it Works -->
+            <div class="mt-5">
+                <h3 class="text-center mb-4">How It Works</h3>
+                <div class="row g-4">
+                    <div class="col-md-6 col-lg-3">
+                        <div class="text-center">
+                            <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                                <span class="fw-bold text-white">1</span>
+                            </div>
+                            <h6>Register Account</h6>
+                            <small class="text-muted">Create your account with username and password</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="text-center">
+                            <div class="bg-success rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                                <span class="fw-bold text-white">2</span>
+                            </div>
+                            <h6>Enroll Voice</h6>
+                            <small class="text-muted">Record multiple voice samples for training</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="text-center">
+                            <div class="bg-info rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                                <span class="fw-bold text-white">3</span>
+                            </div>
+                            <h6>Process Features</h6>
+                            <small class="text-muted">MFCC features extracted and stored securely</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="text-center">
+                            <div class="bg-warning rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                                <span class="fw-bold text-white">4</span>
+                            </div>
+                            <h6>Authenticate</h6>
+                            <small class="text-muted">Speak to authenticate using your voiceprint</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

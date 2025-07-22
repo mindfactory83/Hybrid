@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Voice Biometric Authentication{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <!-- Welcome Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">Welcome, {{ current_user.username }}!</h2>
+                    <p class="text-muted mb-0">Manage your voice biometric authentication</p>
+                </div>
+                <div class="text-end">
+                    <small class="text-muted">Last login: {{ current_user.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Status Cards -->
+        <div class="col-md-6 col-lg-3">
+            <div class="card border-0 bg-dark h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        {% if current_user.has_voiceprint() %}
+                            <i class="fas fa-check-circle fa-3x text-success"></i>
+                        {% else %}
+                            <i class="fas fa-exclamation-triangle fa-3x text-warning"></i>
+                        {% endif %}
+                    </div>
+                    <h6 class="card-title">Voice Enrollment</h6>
+                    <p class="card-text text-muted">
+                        {% if current_user.has_voiceprint() %}
+                            Enrolled and Active
+                        {% else %}
+                            Not Enrolled
+                        {% endif %}
+                    </p>
+                    {% if not current_user.has_voiceprint() %}
+                        <a href="{{ url_for('enroll_voice') }}" class="btn btn-warning btn-sm">
+                            <i class="fas fa-microphone me-1"></i>Enroll Now
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card border-0 bg-dark h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-shield-alt fa-3x text-info"></i>
+                    </div>
+                    <h6 class="card-title">Security Level</h6>
+                    <p class="card-text text-muted">
+                        {% if current_user.has_voiceprint() %}
+                            Multi-Factor Auth
+                        {% else %}
+                            Password Only
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card border-0 bg-dark h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-history fa-3x text-primary"></i>
+                    </div>
+                    <h6 class="card-title">Auth Attempts</h6>
+                    <p class="card-text text-muted">{{ recent_attempts|length }} recent</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card border-0 bg-dark h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-user fa-3x text-secondary"></i>
+                    </div>
+                    <h6 class="card-title">Account</h6>
+                    <p class="card-text text-muted">{{ current_user.email }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-2">
+        <!-- Quick Actions -->
+        <div class="col-lg-6">
+            <div class="card border-0">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if current_user.has_voiceprint() %}
+                            <a href="{{ url_for('voice_auth') }}" class="btn btn-primary">
+                                <i class="fas fa-microphone me-2"></i>Voice Authentication
+                            </a>
+                            <a href="{{ url_for('re_enroll') }}" class="btn btn-outline-warning">
+                                <i class="fas fa-redo me-2"></i>Re-enroll Voice
+                            </a>
+                        {% else %}
+                            <a href="{{ url_for('enroll_voice') }}" class="btn btn-warning">
+                                <i class="fas fa-microphone-alt me-2"></i>Enroll Voice
+                            </a>
+                        {% endif %}
+                        <button class="btn btn-outline-secondary" disabled>
+                            <i class="fas fa-cog me-2"></i>Settings (Coming Soon)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Authentication Attempts -->
+        <div class="col-lg-6">
+            <div class="card border-0">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-history me-2"></i>Recent Auth Attempts
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_attempts %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-dark">
+                                <thead>
+                                    <tr>
+                                        <th>Status</th>
+                                        <th>Confidence</th>
+                                        <th>Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for attempt in recent_attempts[:5] %}
+                                    <tr>
+                                        <td>
+                                            {% if attempt.success %}
+                                                <i class="fas fa-check-circle text-success me-1"></i>Success
+                                            {% else %}
+                                                <i class="fas fa-times-circle text-danger me-1"></i>Failed
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if attempt.confidence_score %}
+                                                {{ "%.1f"|format(attempt.confidence_score * 100) }}%
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ attempt.timestamp.strftime('%m/%d %H:%M') }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-history fa-2x mb-2"></i>
+                            <p class="mb-0">No authentication attempts yet</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Information Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-0 bg-dark">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-info-circle me-2"></i>About Voice Biometric Authentication
+                    </h5>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <h6 class="text-info">How it Works</h6>
+                            <p class="text-muted small mb-0">
+                                Our system extracts MFCC (Mel-frequency cepstral coefficients) features 
+                                from your voice and uses machine learning to create a unique voiceprint 
+                                for secure authentication.
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="text-info">Security</h6>
+                            <p class="text-muted small mb-0">
+                                Voice features are stored locally and encrypted. We use advanced 
+                                algorithms to ensure high accuracy while protecting against 
+                                replay attacks and spoofing attempts.
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="text-info">Benefits</h6>
+                            <p class="text-muted small mb-0">
+                                Voice authentication provides convenient hands-free security, 
+                                resistance to password attacks, and natural user experience 
+                                while maintaining high security standards.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

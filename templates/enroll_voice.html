@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}Voice Enrollment - Voice Biometric Authentication{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-microphone-alt fa-3x text-primary mb-3"></i>
+                        <h3 class="card-title">Voice Enrollment</h3>
+                        <p class="text-muted">Record your voice samples for biometric authentication</p>
+                    </div>
+
+                    <!-- Progress -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Enrollment Progress</span>
+                            <span id="progress-text" class="text-muted">0 of 3 samples</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div id="progress-bar" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Instructions -->
+                    <div class="alert alert-info border-0" role="alert">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-info-circle me-2"></i>Instructions
+                        </h6>
+                        <ul class="mb-0">
+                            <li>Record 3 voice samples for best accuracy</li>
+                            <li>Speak clearly for 2-5 seconds each time</li>
+                            <li>Use the same phrase or count numbers</li>
+                            <li>Ensure quiet environment</li>
+                        </ul>
+                    </div>
+
+                    <!-- Recording Interface -->
+                    <div class="text-center mb-4">
+                        <div class="mb-3">
+                            <div id="recording-indicator" class="d-inline-block position-relative">
+                                <button id="record-btn" class="btn btn-primary btn-lg rounded-circle" style="width: 100px; height: 100px;">
+                                    <i id="record-icon" class="fas fa-microphone fa-2x"></i>
+                                </button>
+                                <div id="recording-animation" class="position-absolute top-0 start-0 w-100 h-100 rounded-circle border border-danger" style="display: none; animation: pulse 1s infinite;"></div>
+                            </div>
+                        </div>
+                        
+                        <div id="recording-status" class="mb-3">
+                            <span class="text-muted">Click the microphone to start recording</span>
+                        </div>
+
+                        <!-- Audio Visualization -->
+                        <div class="mb-3">
+                            <canvas id="audio-visualizer" width="400" height="100" class="border rounded" style="display: none;"></canvas>
+                        </div>
+
+                        <!-- Sample List -->
+                        <div id="samples-list" class="row g-2 justify-content-center" style="display: none;">
+                            <!-- Sample cards will be added here dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="text-center">
+                        <button id="clear-samples" class="btn btn-outline-secondary me-2" style="display: none;">
+                            <i class="fas fa-trash me-2"></i>Clear All Samples
+                        </button>
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                        </a>
+                    </div>
+
+                    <!-- Success Message -->
+                    <div id="enrollment-success" class="alert alert-success border-0 mt-4" style="display: none;">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-check-circle me-2"></i>Enrollment Complete!
+                        </h6>
+                        <p class="mb-2">Your voice has been successfully enrolled for biometric authentication.</p>
+                        <hr>
+                        <a href="{{ url_for('voice_auth') }}" class="btn btn-success">
+                            <i class="fas fa-microphone me-2"></i>Test Authentication
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/audio_recorder.js') }}"></script>
+<script>
+// Initialize voice enrollment
+document.addEventListener('DOMContentLoaded', function() {
+    const recorder = new AudioRecorder();
+    let sampleCount = 0;
+    const maxSamples = 3;
+    
+    const recordBtn = document.getElementById('record-btn');
+    const recordIcon = document.getElementById('record-icon');
+    const recordingStatus = document.getElementById('recording-status');
+    const recordingAnimation = document.getElementById('recording-animation');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const samplesList = document.getElementById('samples-list');
+    const clearSamplesBtn = document.getElementById('clear-samples');
+    const enrollmentSuccess = document.getElementById('enrollment-success');
+    
+    recordBtn.addEventListener('click', async function() {
+        if (!recorder.isRecording) {
+            try {
+                await recorder.startRecording();
+                recordIcon.className = 'fas fa-stop fa-2x';
+                recordBtn.className = 'btn btn-danger btn-lg rounded-circle';
+                recordingStatus.innerHTML = '<span class="text-danger fw-bold">Recording... Click to stop</span>';
+                recordingAnimation.style.display = 'block';
+            } catch (error) {
+                alert('Error starting recording: ' + error.message);
+            }
+        } else {
+            const audioBlob = await recorder.stopRecording();
+            recordIcon.className = 'fas fa-microphone fa-2x';
+            recordBtn.className = 'btn btn-primary btn-lg rounded-circle';
+            recordingStatus.innerHTML = '<span class="text-muted">Processing...</span>';
+            recordingAnimation.style.display = 'none';
+            
+            // Upload the sample
+            uploadSample(audioBlob, sampleCount + 1);
+        }
+    });
+    
+    clearSamplesBtn.addEventListener('click', function() {
+        if (confirm('Are you sure you want to clear all samples?')) {
+            clearAllSamples();
+        }
+    });
+    
+    async function uploadSample(audioBlob, sampleNumber) {
+        const formData = new FormData();
+        formData.append('audio', audioBlob, `sample_${sampleNumber}.wav`);
+        formData.append('sample_number', sampleNumber);
+        
+        try {
+            const response = await fetch('/upload_voice_sample', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                sampleCount = result.sample_count;
+                updateProgress();
+                addSampleToList(sampleNumber);
+                
+                if (result.enrolled) {
+                    showEnrollmentSuccess();
+                } else {
+                    recordingStatus.innerHTML = `<span class="text-success">${result.message}</span>`;
+                }
+            } else {
+                recordingStatus.innerHTML = `<span class="text-danger">Error: ${result.error}</span>`;
+            }
+        } catch (error) {
+            recordingStatus.innerHTML = `<span class="text-danger">Upload failed: ${error.message}</span>`;
+        }
+    }
+    
+    function updateProgress() {
+        const percentage = (sampleCount / maxSamples) * 100;
+        progressBar.style.width = percentage + '%';
+        progressText.textContent = `${sampleCount} of ${maxSamples} samples`;
+        
+        if (sampleCount > 0) {
+            samplesList.style.display = 'block';
+            clearSamplesBtn.style.display = 'inline-block';
+        }
+        
+        if (sampleCount >= maxSamples) {
+            recordBtn.disabled = true;
+            recordBtn.innerHTML = '<i class="fas fa-check fa-2x"></i>';
+            recordBtn.className = 'btn btn-success btn-lg rounded-circle';
+            recordingStatus.innerHTML = '<span class="text-success">All samples recorded!</span>';
+        }
+    }
+    
+    function addSampleToList(sampleNumber) {
+        const sampleCard = document.createElement('div');
+        sampleCard.className = 'col-auto';
+        sampleCard.innerHTML = `
+            <div class="card bg-success text-white" style="width: 80px;">
+                <div class="card-body text-center py-2">
+                    <i class="fas fa-check-circle fa-2x mb-1"></i>
+                    <small class="d-block">Sample ${sampleNumber}</small>
+                </div>
+            </div>
+        `;
+        samplesList.appendChild(sampleCard);
+    }
+    
+    function showEnrollmentSuccess() {
+        enrollmentSuccess.style.display = 'block';
+        recordingStatus.innerHTML = '<span class="text-success fw-bold">Enrollment complete!</span>';
+    }
+    
+    function clearAllSamples() {
+        sampleCount = 0;
+        samplesList.innerHTML = '';
+        samplesList.style.display = 'none';
+        clearSamplesBtn.style.display = 'none';
+        enrollmentSuccess.style.display = 'none';
+        updateProgress();
+        
+        recordBtn.disabled = false;
+        recordBtn.innerHTML = '<i class="fas fa-microphone fa-2x"></i>';
+        recordBtn.className = 'btn btn-primary btn-lg rounded-circle';
+        recordingStatus.innerHTML = '<span class="text-muted">Click the microphone to start recording</span>';
+    }
+});
+</script>
+
+<style>
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
+</style>
+{% endblock %}

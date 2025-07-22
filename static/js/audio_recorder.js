@@ -37,6 +37,7 @@ class AudioRecorder {
                 }
             };
 
+            // Initial setup - will be overridden in stopRecording if needed
             this.mediaRecorder.onstop = () => {
                 this.stopVisualization();
             };
@@ -54,16 +55,41 @@ class AudioRecorder {
 
     async stopRecording() {
         if (!this.isRecording || !this.mediaRecorder) {
+            console.log('Cannot stop recording: not recording or no media recorder');
             return null;
         }
 
-        return new Promise((resolve) => {
-            this.mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+        if (this.mediaRecorder.state === 'inactive') {
+            console.log('MediaRecorder is already inactive');
+            return null;
+        }
+
+        return new Promise((resolve, reject) => {
+            // Set callback for when recording stops
+            this.onStopCallback = (audioBlob) => {
+                console.log('Recording stopped, audio blob size:', audioBlob.size);
                 this.cleanup();
                 resolve(audioBlob);
             };
 
+            // Add timeout to prevent hanging
+            const timeout = setTimeout(() => {
+                console.error('Recording stop timeout');
+                this.cleanup();
+                reject(new Error('Recording stop timeout'));
+            }, 5000);
+
+            this.mediaRecorder.onstop = () => {
+                clearTimeout(timeout);
+                this.stopVisualization();
+                const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                if (this.onStopCallback) {
+                    this.onStopCallback(audioBlob);
+                    this.onStopCallback = null;
+                }
+            };
+
+            console.log('Stopping recording...');
             this.mediaRecorder.stop();
             this.isRecording = false;
         });
@@ -148,6 +174,8 @@ class AudioRecorder {
         this.stopVisualization();
         this.mediaRecorder = null;
         this.isRecording = false;
+        this.onStopCallback = null;
+        console.log('Audio recorder cleanup completed');
     }
 
     // Convert WebM to WAV for better compatibility

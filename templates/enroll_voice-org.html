@@ -42,13 +42,13 @@
                     <div class="text-center mb-4">
                         <div class="mb-3">
                             <div id="recording-indicator" class="d-inline-block position-relative">
-                                <button id="record-btn" class="btn btn-primary btn-lg rounded-circle d-flex align-items-center justify-content-center" style="width: 100px; height: 100px;">
+                                <button id="record-btn" class="btn btn-primary btn-lg rounded-circle" style="width: 100px; height: 100px;">
                                     <i id="record-icon" class="fas fa-microphone fa-2x"></i>
                                 </button>
                                 <div id="recording-animation" class="position-absolute top-0 start-0 w-100 h-100 rounded-circle border border-danger" style="display: none; animation: pulse 1s infinite;"></div>
                             </div>
                         </div>
-
+                        
                         <div id="recording-status" class="mb-3">
                             <span class="text-muted">Click the microphone to start recording</span>
                         </div>
@@ -95,11 +95,12 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/audio_recorder.js') }}"></script>
 <script>
+// Initialize voice enrollment
 document.addEventListener('DOMContentLoaded', function() {
     const recorder = new AudioRecorder();
     let sampleCount = 0;
     const maxSamples = 3;
-
+    
     const recordBtn = document.getElementById('record-btn');
     const recordIcon = document.getElementById('record-icon');
     const recordingStatus = document.getElementById('recording-status');
@@ -109,9 +110,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const samplesList = document.getElementById('samples-list');
     const clearSamplesBtn = document.getElementById('clear-samples');
     const enrollmentSuccess = document.getElementById('enrollment-success');
-
-    // Ensure click on icon triggers the button
-    document.getElementById('recording-indicator').addEventListener('click', async function () {
+    
+    recordBtn.addEventListener('click', async function() {
         if (!recorder.isRecording) {
             try {
                 await recorder.startRecording();
@@ -128,34 +128,36 @@ document.addEventListener('DOMContentLoaded', function() {
             recordBtn.className = 'btn btn-primary btn-lg rounded-circle';
             recordingStatus.innerHTML = '<span class="text-muted">Processing...</span>';
             recordingAnimation.style.display = 'none';
+            
+            // Upload the sample
             uploadSample(audioBlob, sampleCount + 1);
         }
     });
-
-    clearSamplesBtn.addEventListener('click', function () {
+    
+    clearSamplesBtn.addEventListener('click', function() {
         if (confirm('Are you sure you want to clear all samples?')) {
             clearAllSamples();
         }
     });
-
+    
     async function uploadSample(audioBlob, sampleNumber) {
         const formData = new FormData();
         formData.append('audio', audioBlob, `sample_${sampleNumber}.wav`);
         formData.append('sample_number', sampleNumber);
-
+        
         try {
             const response = await fetch('/upload_voice_sample', {
                 method: 'POST',
                 body: formData
             });
-
+            
             const result = await response.json();
-
+            
             if (result.success) {
                 sampleCount = result.sample_count;
                 updateProgress();
                 addSampleToList(sampleNumber);
-
+                
                 if (result.enrolled) {
                     showEnrollmentSuccess();
                 } else {
@@ -168,17 +170,17 @@ document.addEventListener('DOMContentLoaded', function() {
             recordingStatus.innerHTML = `<span class="text-danger">Upload failed: ${error.message}</span>`;
         }
     }
-
+    
     function updateProgress() {
         const percentage = (sampleCount / maxSamples) * 100;
         progressBar.style.width = percentage + '%';
         progressText.textContent = `${sampleCount} of ${maxSamples} samples`;
-
+        
         if (sampleCount > 0) {
             samplesList.style.display = 'block';
             clearSamplesBtn.style.display = 'inline-block';
         }
-
+        
         if (sampleCount >= maxSamples) {
             recordBtn.disabled = true;
             recordBtn.innerHTML = '<i class="fas fa-check fa-2x"></i>';
@@ -186,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
             recordingStatus.innerHTML = '<span class="text-success">All samples recorded!</span>';
         }
     }
-
+    
     function addSampleToList(sampleNumber) {
         const sampleCard = document.createElement('div');
         sampleCard.className = 'col-auto';
@@ -200,12 +202,12 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         samplesList.appendChild(sampleCard);
     }
-
+    
     function showEnrollmentSuccess() {
         enrollmentSuccess.style.display = 'block';
         recordingStatus.innerHTML = '<span class="text-success fw-bold">Enrollment complete!</span>';
     }
-
+    
     function clearAllSamples() {
         sampleCount = 0;
         samplesList.innerHTML = '';
@@ -213,7 +215,7 @@ document.addEventListener('DOMContentLoaded', function() {
         clearSamplesBtn.style.display = 'none';
         enrollmentSuccess.style.display = 'none';
         updateProgress();
-
+        
         recordBtn.disabled = false;
         recordBtn.innerHTML = '<i class="fas fa-microphone fa-2x"></i>';
         recordBtn.className = 'btn btn-primary btn-lg rounded-circle';
@@ -221,6 +223,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
 <style>
 @keyframes pulse {
     0% { transform: scale(1); opacity: 1; }

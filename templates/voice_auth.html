@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const authResult = document.getElementById('auth-result');
     const tryAgainBtn = document.getElementById('try-again-btn');
     
-    recordBtn.addEventListener('click', async function() {
+    document.getElementById('recording-indicator').addEventListener('click', async function() {
         if (!recorder.isRecording) {
             try {
                 await recorder.startRecording();
